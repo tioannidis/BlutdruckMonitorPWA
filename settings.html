@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Einstellungen · Blutdruck Monitor</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f766e">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/settings.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-btn">← Zurück zum Kalender</a>
+        <h1>⚙️ Einstellungen</h1>
+
+        <div class="settings-section">
+            <h2>🔑 Mistral API</h2>
+            <p class="api-key-info">
+                Für die Fotoanalyse wird ein Mistral-API-Key benötigt. Der Key wird lokal im Browser gespeichert.
+                Bitte beachten: Ein API-Key im Browser ist grundsätzlich für Nutzer des Geräts sichtbar.
+            </p>
+            <div class="form-group">
+                <label>API-Key:</label>
+                <input type="password" id="apiKeyInput" placeholder="Hier Mistral API-Key eingeben">
+            </div>
+            <div class="form-group">
+                <label>Modell:</label>
+                <input type="text" id="modelInput" placeholder="pixtral-12b-2409">
+            </div>
+            <button class="btn btn-primary" id="saveApiBtn">Speichern</button>
+        </div>
+
+        <div class="settings-section">
+            <h2>🎯 Bewertungs-Grenzwerte</h2>
+            <p class="api-key-info">Diese Werte bestimmen die Einfärbung der Messungen im Kalender und in der Tagesansicht.</p>
+            <div class="threshold-grid">
+                <div class="threshold-card">
+                    <label>SYS erhöht ab</label>
+                    <input type="number" id="sysHigh" min="100" max="200">
+                </div>
+                <div class="threshold-card">
+                    <label>DIA erhöht ab</label>
+                    <input type="number" id="diaHigh" min="70" max="120">
+                </div>
+                <div class="threshold-card">
+                    <label>SYS niedrig bis</label>
+                    <input type="number" id="sysLow" min="60" max="120">
+                </div>
+                <div class="threshold-card">
+                    <label>DIA niedrig bis</label>
+                    <input type="number" id="diaLow" min="40" max="90">
+                </div>
+            </div>
+            <div style="margin-top:15px;">
+                <button class="btn btn-primary" id="saveThresholdsBtn">Grenzwerte speichern</button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2>💾 Daten</h2>
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="exportBtn">JSON-Backup exportieren</button>
+                <button class="btn btn-primary" id="exportCsvBtn">CSV exportieren (für Arzt)</button>
+                <button class="btn btn-secondary" id="importBtn">Backup importieren</button>
+                <input type="file" id="importInput" accept=".json,application/json" style="display: none;">
+            </div>
+            <div class="storage-info" id="storageInfo"></div>
+        </div>
+
+        <div class="danger">
+            <h3>⚠️ Alle Daten löschen</h3>
+            <p>Löscht alle Messungen, Einstellungen und den API-Key dauerhaft.</p>
+            <div style="margin-top:12px;">
+                <button class="btn btn-danger" id="clearAllBtn">Alle Daten löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/StorageManager.js"></script>
+    <script src="js/BloodPressureTracker.js"></script>
+    <script src="version.js"></script>
+    <script>
+        document.getElementById('apiKeyInput').value = storageManager.loadApiKey();
+
+        var settings = storageManager.loadSettings();
+        document.getElementById('modelInput').value = settings.model || 'pixtral-12b-2409';
+        document.getElementById('sysHigh').value = settings.sysHigh;
+        document.getElementById('diaHigh').value = settings.diaHigh;
+        document.getElementById('sysLow').value = settings.sysLow;
+        document.getElementById('diaLow').value = settings.diaLow;
+
+        document.getElementById('saveApiBtn').onclick = function () {
+            storageManager.saveApiKey(document.getElementById('apiKeyInput').value.trim());
+            var currentSettings = storageManager.loadSettings();
+            currentSettings.model = document.getElementById('modelInput').value.trim();
+            storageManager.saveSettings(currentSettings);
+            alert('API-Einstellungen gespeichert.');
+        };
+
+        document.getElementById('saveThresholdsBtn').onclick = function () {
+            var currentSettings = storageManager.loadSettings();
+            currentSettings.sysHigh = parseInt(document.getElementById('sysHigh').value, 10) || 140;
+            currentSettings.diaHigh = parseInt(document.getElementById('diaHigh').value, 10) || 90;
+            currentSettings.sysLow = parseInt(document.getElementById('sysLow').value, 10) || 90;
+            currentSettings.diaLow = parseInt(document.getElementById('diaLow').value, 10) || 60;
+            storageManager.saveSettings(currentSettings);
+            alert('Grenzwerte gespeichert.');
+        };
+
+        document.getElementById('exportBtn').onclick = function () {
+            bloodPressureTracker.settings = storageManager.loadSettings();
+            bloodPressureTracker.exportAllData();
+        };
+
+        document.getElementById('exportCsvBtn').onclick = function () {
+            bloodPressureTracker.exportCsv();
+        };
+
+        document.getElementById('importBtn').onclick = function () {
+            document.getElementById('importInput').click();
+        };
+
+        document.getElementById('importInput').onchange = function (e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    var data = JSON.parse(reader.result);
+                    var entries = Array.isArray(data) ? data : (Array.isArray(data.entries) ? data.entries : []);
+                    storageManager.saveEntries(entries);
+                    if (data.settings) storageManager.saveSettings(data.settings);
+                    alert('Backup importiert (' + entries.length + ' Einträge).');
+                } catch (err) {
+                    alert('Import fehlgeschlagen: Ungültige JSON-Datei.');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        };
+
+        document.getElementById('clearAllBtn').onclick = function () {
+            if (!confirm('Wirklich ALLE Daten unwiderruflich löschen?')) return;
+            storageManager.clearAll();
+            alert('Alle Daten wurden gelöscht.');
+        };
+
+        function updateStorageInfo() {
+            var entries = storageManager.loadEntries();
+            var size = new Blob([JSON.stringify(entries)]).size;
+            document.getElementById('storageInfo').textContent =
+                entries.length + ' Einträge gespeichert · ca. ' + (size / 1024).toFixed(1) + ' KB im LocalStorage';
+        }
+        updateStorageInfo();
+    </script>
+</body>
+</html>

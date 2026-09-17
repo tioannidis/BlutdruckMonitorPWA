@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiken · Blutdruck Monitor</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f766e">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/stats.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-btn">← Zurück zum Kalender</a>
+        <h1>📊 Statistiken</h1>
+
+        <div class="controls">
+            <div class="range-buttons" id="rangeButtons">
+                <button class="range-btn active" data-range="7">7 Tage</button>
+                <button class="range-btn" data-range="14">14 Tage</button>
+                <button class="range-btn" data-range="30">30 Tage</button>
+            </div>
+        </div>
+
+        <div class="summary-grid" id="summaryGrid"></div>
+
+        <div class="chart-section">
+            <h2>Verlauf</h2>
+            <div class="legend">
+                <span><span class="legend-dot" style="background:#dc3545;"></span>SYS</span>
+                <span><span class="legend-dot" style="background:#0f766e;"></span>DIA</span>
+                <span><span class="legend-dot" style="background:#6366f1;"></span>Puls</span>
+            </div>
+            <div class="bar-chart" id="barChart"></div>
+        </div>
+
+        <div class="chart-section">
+            <h2>Erfasste Zeitpunkte</h2>
+            <div class="missing-list" id="missingList"></div>
+        </div>
+
+        <p class="hint">Die Auswertung dient nur der Orientierung und ersetzt keine medizinische Beurteilung.</p>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/StorageManager.js"></script>
+    <script src="js/StatsManager.js"></script>
+    <script src="version.js"></script>
+    <script>
+        var currentRange = 7;
+
+        function loadData() {
+            var entries = storageManager.loadEntries();
+            var settings = storageManager.loadSettings();
+            return new StatsManager(entries, settings);
+        }
+
+        function render() {
+            var stats = loadData();
+            var summary = stats.summarize(currentRange);
+            renderSummary(summary);
+            renderChart(stats.dailySeries(currentRange));
+            renderMissing(stats.missingPeriodStats(currentRange));
+        }
+
+        function renderSummary(s) {
+            var items = [
+                { label: 'Messungen', value: s.readings },
+                { label: 'Messtage', value: s.days },
+                { label: 'Ø SYS', value: s.avgSys },
+                { label: 'Ø DIA', value: s.avgDia },
+                { label: 'Ø Puls', value: s.avgPulse },
+                { label: 'Erhöhte Messungen', value: s.highCount }
+            ];
+            document.getElementById('summaryGrid').innerHTML = items.map(function (item) {
+                return '<div class="summary-card">' +
+                    '<div class="summary-value">' + item.value + '</div>' +
+                    '<div class="summary-label">' + item.label + '</div>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function renderChart(series) {
+            var container = document.getElementById('barChart');
+            var maxVal = 200;
+            series.forEach(function (day) {
+                maxVal = Math.max(maxVal, day.sys, day.dia, day.pulse);
+            });
+            var barHeight = function (val) {
+                if (!val) return 2;
+                return Math.max(4, Math.round((val / maxVal) * 160));
+            };
+            container.innerHTML = series.map(function (day) {
+                var shortDate = day.date.slice(5);
+                return '<div class="bar-group">' +
+                    '<div class="bar sys" style="height:' + barHeight(day.sys) + 'px;"></div>' +
+                    '<div class="bar dia" style="height:' + barHeight(day.dia) + 'px;"></div>' +
+                    '<div class="bar pulse" style="height:' + barHeight(day.pulse) + 'px;"></div>' +
+                    '<div class="bar-x-label">' + shortDate + '</div>' +
+                    '</div>';
+            }).join('') || '<div class="empty-state">Keine Messungen im gewählten Zeitraum.</div>';
+        }
+
+        function renderMissing(missing) {
+            var container = document.getElementById('missingList');
+            var items = [
+                { key: 'morning', label: '🌅 Morgens' },
+                { key: 'midday', label: '☀️ Mittags' },
+                { key: 'evening', label: '🌙 Abends' }
+            ];
+            container.innerHTML = items.map(function (item) {
+                return '<div class="missing-card">' +
+                    '<div class="missing-number">' + (missing[item.key] || 0) + '</div>' +
+                    '<div class="missing-label">' + item.label + ' Messungen</div>' +
+                    '</div>';
+            }).join('');
+        }
+
+        document.getElementById('rangeButtons').addEventListener('click', function (e) {
+            if (!e.target.classList.contains('range-btn')) return;
+            document.querySelectorAll('.range-btn').forEach(function (btn) {
+                btn.classList.toggle('active', btn === e.target);
+            });
+            currentRange = parseInt(e.target.dataset.range, 10);
+            render();
+        });
+
+        render();
+    </script>
+</body>
+</html>

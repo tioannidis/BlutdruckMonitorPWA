@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blutdruck Monitor</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f766e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+    <div class="theme-toggle">
+        <div class="toggle-switch" id="themeToggle">
+            <div class="toggle-slider">🌙</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>🩺 Blutdruck Monitor</h1>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="monthReadingsCount">0</div>
+                <div class="stat-label">Messungen diesen Monat</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="monthDaysCount">0</div>
+                <div class="stat-label">Messtage diesen Monat</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="monthAvgSys">0</div>
+                <div class="stat-label">Ø SYS diesen Monat</div>
+            </div>
+        </div>
+
+        <div class="quick-add">
+            <button class="btn btn-primary" id="addEntryBtn">＋ Messung erfassen</button>
+        </div>
+
+        <div class="controls">
+            <div class="month-nav">
+                <button class="nav-btn" id="prevMonth">‹</button>
+                <div class="month-year" id="monthYear" title="Klicken für heute"></div>
+                <button class="nav-btn" id="nextMonth">›</button>
+            </div>
+            <div class="nav-buttons">
+                <button class="export-btn icon-btn" id="statistics" title="Statistiken">📊</button>
+                <button class="export-btn icon-btn" id="exportData" title="Daten exportieren">💾</button>
+                <button class="export-btn icon-btn" id="settings" title="Einstellungen">⚙️</button>
+            </div>
+        </div>
+
+        <div class="calendar" id="calendar">
+            <div class="day-header">Mo</div>
+            <div class="day-header">Di</div>
+            <div class="day-header">Mi</div>
+            <div class="day-header">Do</div>
+            <div class="day-header">Fr</div>
+            <div class="day-header">Sa</div>
+            <div class="day-header">So</div>
+        </div>
+
+        <div class="period-legend">
+            <span><span class="legend-dot" style="background:#f59e0b;"></span>🌅 Morgens</span>
+            <span><span class="legend-dot" style="background:#0ea5e9;"></span>☀️ Mittags</span>
+            <span><span class="legend-dot" style="background:#6366f1;"></span>🌙 Abends</span>
+        </div>
+    </div>
+
+    <div class="version" id="version"></div>
+
+    <div class="modal" id="dayModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Messungen</h3>
+
+            <div id="existingEntries" style="margin-bottom: 20px;"></div>
+
+            <div class="form-group">
+                <label>📷 Foto analysieren (Mistral):</label>
+                <button class="btn btn-photo" id="photoBtn">Foto vom Messgerät analysieren</button>
+                <input type="file" id="photoInput" accept="image/*" capture="environment" style="display: none;">
+                <div class="photo-status" id="photoStatus"></div>
+            </div>
+
+            <div id="manualForm">
+                <div class="form-group">
+                    <label>Messzeitpunkt:</label>
+                    <select id="entryPeriod">
+                        <option value="morning">🌅 Morgens</option>
+                        <option value="midday">☀️ Mittags</option>
+                        <option value="evening">🌙 Abends</option>
+                        <option value="other">🕐 Individuell</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Uhrzeit:</label>
+                    <div class="time-input-wrapper">
+                        <input type="time" id="entryTime">
+                        <button type="button" class="now-time-btn" id="nowTimeBtn" title="Jetzt übernehmen">🕐</button>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Systolisch (SYS):</label>
+                        <input type="number" id="entrySystolic" placeholder="z.B. 137" min="60" max="260">
+                    </div>
+                    <div class="form-group">
+                        <label>Diastolisch (DIA):</label>
+                        <input type="number" id="entryDiastolic" placeholder="z.B. 88" min="30" max="160">
+                    </div>
+                    <div class="form-group">
+                        <label>Puls:</label>
+                        <input type="number" id="entryPulse" placeholder="z.B. 72" min="20" max="250">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="quick-medication-toggle">
+                        <input type="checkbox" id="avgToggle">
+                        <span>Mittelwert aus 2 Messungen bilden</span>
+                    </label>
+                </div>
+
+                <div id="avgFields" style="display: none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>2. Messung SYS:</label>
+                            <input type="number" id="entrySys2" min="60" max="260">
+                        </div>
+                        <div class="form-group">
+                            <label>2. Messung DIA:</label>
+                            <input type="number" id="entryDia2" min="30" max="160">
+                        </div>
+                        <div class="form-group">
+                            <label>2. Messung Puls:</label>
+                            <input type="number" id="entryPulse2" min="20" max="250">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Notizen:</label>
+                    <textarea id="entryNotes" placeholder="Medikamente, Aktivität, Symptome..."></textarea>
+                </div>
+            </div>
+
+            <div id="aiConfirmSection" style="display: none;">
+                <div class="form-group">
+                    <label id="aiConfidence">Erkannte Werte – bitte prüfen und bestätigen:</label>
+                </div>
+                <div class="form-group">
+                    <label>Messzeitpunkt:</label>
+                    <select id="aiPeriod">
+                        <option value="morning">🌅 Morgens</option>
+                        <option value="midday">☀️ Mittags</option>
+                        <option value="evening">🌙 Abends</option>
+                        <option value="other">🕐 Individuell</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Uhrzeit:</label>
+                    <input type="time" id="aiTime">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Systolisch (SYS):</label>
+                        <input type="number" id="aiSys" min="60" max="260">
+                    </div>
+                    <div class="form-group">
+                        <label>Diastolisch (DIA):</label>
+                        <input type="number" id="aiDia" min="30" max="160">
+                    </div>
+                    <div class="form-group">
+                        <label>Puls:</label>
+                        <input type="number" id="aiPulse" min="20" max="250">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notizen:</label>
+                    <textarea id="aiNotes" placeholder="Optional..."></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="cancelBtn">Schließen</button>
+                <button class="btn btn-primary" id="addBtn">Hinzufügen</button>
+                <button class="btn btn-primary" id="saveBtn" style="display: none;">Speichern</button>
+                <button class="btn btn-primary" id="aiConfirmBtn" style="display: none;">Bestätigen</button>
+                <button class="btn btn-secondary" id="aiCancelBtn" style="display: none;">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/StorageManager.js"></script>
+    <script src="js/MistralClient.js"></script>
+    <script src="js/BloodPressureTracker.js"></script>
+    <script src="js/ThemeManager.js"></script>
+    <script src="version.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            themeManager.init();
+            document.getElementById('version').textContent = 'v' + window.APP_VERSION;
+        });
+    </script>
+</body>
+</html>

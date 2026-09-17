@@ -1,0 +1,21 @@
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+
+# Test- und Build-Ausgaben
+coverage/
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
